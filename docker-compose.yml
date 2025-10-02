@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Serviço do Banco de Dados PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: oficina_db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=oficinadb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Serviço do Backend FastAPI
+  backend:
+    build: ./backend
+    container_name: oficina_backend
+    command: uvicorn main:app --host 0.0.0.0 --reload # --reload é para desenvolvimento
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/oficinadb
+    depends_on:
+      - db # Garante que o banco de dados inicie antes do backend
+
+  # Serviço do Frontend React
+  frontend:
+    build: ./frontend
+    container_name: oficina_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src # Sincroniza apenas a pasta src para hot-reload
+    stdin_open: true # Necessário para o modo interativo do React
+    tty: true
+    depends_on:
+      - backend # Garante que o backend inicie antes do frontend
+
+# Volume nomeado para persistir os dados do banco de dados
+volumes:
+  postgres_data:
